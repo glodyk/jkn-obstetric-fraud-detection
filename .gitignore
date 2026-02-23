@@ -1,0 +1,21 @@
+# BPJS Sensitive Data
+data/*
+*.csv
+*.parquet
+*.xlsx
+
+# R
+.Rhistory
+.RData
+.Rproj.user
+
+# BigQuery credential
+*.json
+
+# output
+output/*.png
+output/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
