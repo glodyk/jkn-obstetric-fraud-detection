@@ -1,0 +1,9 @@
+mother_id,delivery_order,delivery_date,previous_delivery_date,interval_days,hospital,flag_category
+A10234,1,2022-01-14,,,
+A10234,2,2022-05-30,2022-01-14,136,RS Sejahtera,IMPOSSIBLE
+B88721,1,2021-09-02,,,
+B88721,2,2022-03-10,2021-09-02,189,RS Harapan,EXTREMELY_SHORT
+C55210,1,2022-02-11,,,
+C55210,2,2022-11-01,2022-02-11,263,RS Bhakti,PLAUSIBLE
+D77120,1,2022-06-01,,,
+D77120,2,2022-10-05,2022-06-01,126,RS Sejahtera,IMPOSSIBLE
