@@ -2,47 +2,88 @@
 
 ## Background
 
-Indonesia's National Health Insurance (JKN) covers nearly the entire population.
-Obstetric services are among the most frequently claimed benefits and have significant financial impact.
+Indonesia’s National Health Insurance (JKN) relies on administrative claims data to reimburse hospitals for delivery care.
+However, claims data are designed for payment, not clinical verification. As a result, clinically implausible delivery patterns may occur but remain undetected in routine monitoring.
 
-However, administrative claim data may contain:
+This project reconstructs longitudinal delivery histories of insured mothers in order to identify biologically implausible birth intervals and abnormal provider patterns.
 
-* biologically implausible delivery intervals
-* repeated deliveries within short periods
-* facility-level anomalies
+---
 
-This project aims to detect abnormal patterns using national claims data.
+## Research Question
 
-## Objectives
+Can administrative claims data be used to detect hospitals producing statistically and biologically implausible delivery patterns?
 
-1. Identify impossible biological delivery intervals
-2. Detect high-risk facilities
-3. Build audit dashboard for stakeholders
-4. Provide feedback for healthcare providers and health offices
+---
 
 ## Data Source
 
-BPJS Kesehatan administrative claims data (de-identified).
+Administrative claims data from the Indonesian National Health Insurance (JKN), including:
 
-No individual patient data is publicly shared in this repository.
+* Inpatient INA-CBG claims (hospital deliveries)
+* Outpatient non-capitation claims (antenatal and follow-up care)
+* Referral records
+* Audit verification outcomes (when available)
 
-## Methods
+The data represent routine operational data, not clinical registry data.
 
-* BigQuery SQL (data engineering)
-* Survival analysis (RCT completion)
-* Multilevel modeling (facility variation)
-* Anomaly detection
-* Shiny dashboard audit tool
+---
 
-## Project Structure
+## Core Method
 
-* `sql/` : data mart & anomaly queries
-* `r/` : statistical modeling
-* `dashboard/` : Shiny audit system
-* `manuscript/` : research paper
-* `docs/` : documentation
-* `output/` : figures and tables
+### 1. Patient Linking
 
-## Author
+Patients are linked longitudinally using anonymized participant identifiers to reconstruct individual maternal histories.
 
-Health Financing Analyst — Indonesia
+### 2. Delivery Sequence Construction
+
+Each mother’s delivery events are ordered chronologically to create a delivery sequence:
+
+Mother → Delivery 1 → Delivery 2 → Delivery 3 → ...
+
+### 3. Inter-delivery Interval
+
+For each consecutive delivery:
+
+```
+interval = discharge_date(current_delivery) - discharge_date(previous_delivery)
+```
+
+Clinically impossible intervals are defined as:
+
+* < 150 days (biologically implausible)
+* 150–210 days (extremely improbable)
+* 210–240 days (clinically suspicious)
+
+### 4. Provider Pattern Detection
+
+Hospitals are flagged when they produce:
+
+* High proportion of short birth intervals
+* Repeated impossible deliveries from the same patients
+* Concentration of events in specific providers
+
+---
+
+## Output
+
+The system produces:
+
+* flagged patients
+* flagged hospitals
+* monitoring indicators for verification teams
+* downloadable audit lists for field investigators
+
+---
+
+## Purpose
+
+This is not intended to accuse providers of fraud.
+The objective is early detection of abnormal utilization patterns requiring medical verification.
+
+The system functions as a clinical plausibility screening tool within health insurance governance.
+
+---
+
+## Status
+
+Active research prototype using SQL-based reconstruction in BigQuery.
