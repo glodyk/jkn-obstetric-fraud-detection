@@ -87,3 +87,20 @@ The system functions as a clinical plausibility screening tool within health ins
 ## Status
 
 Active research prototype using SQL-based reconstruction in BigQuery.
+
+---
+
+## Example Output
+
+Below is an example of how the system flags biologically implausible delivery sequences.
+
+Each row represents a reconstructed maternal delivery history.
+The interval between consecutive deliveries is calculated and classified into clinical plausibility categories.
+
+| Flag Category   | Interpretation                               |
+| --------------- | -------------------------------------------- |
+| IMPOSSIBLE      | Pregnancy interval biologically not possible |
+| EXTREMELY_SHORT | Highly improbable clinically                 |
+| PLAUSIBLE       | Within expected obstetric range              |
+
+The output is designed to support medical verification teams by prioritizing cases for audit, not to automatically determine fraud.
