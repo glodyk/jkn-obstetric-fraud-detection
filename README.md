@@ -1,106 +1,60 @@
 # JKN Obstetric Fraud Detection
 
-## Background
+This repository contains the full analytical pipeline for detecting potential fraud and anomaly patterns in obstetric (persalinan) claims within the Indonesian National Health Insurance (JKN) system.
 
-Indonesia’s National Health Insurance (JKN) relies on administrative claims data to reimburse hospitals for delivery care.
-However, claims data are designed for payment, not clinical verification. As a result, clinically implausible delivery patterns may occur but remain undetected in routine monitoring.
+The project is designed for:
 
-This project reconstructs longitudinal delivery histories of insured mothers in order to identify biologically implausible birth intervals and abnormal provider patterns.
-
----
-
-## Research Question
-
-Can administrative claims data be used to detect hospitals producing statistically and biologically implausible delivery patterns?
+- Internal BPJS Kesehatan research
+- Health services evaluation
+- Academic publication
 
 ---
 
-## Data Source
+# Study Objective
 
-Administrative claims data from the Indonesian National Health Insurance (JKN), including:
+To identify abnormal provider behavior patterns in obstetric claims using:
 
-* Inpatient INA-CBG claims (hospital deliveries)
-* Outpatient non-capitation claims (antenatal and follow-up care)
-* Referral records
-* Audit verification outcomes (when available)
-
-The data represent routine operational data, not clinical registry data.
+- Caesarean section rate anomalies
+- Cohort-based utilization analysis
+- Sequence of care reconstruction
+- Supervised and unsupervised fraud modeling
 
 ---
 
-## Core Method
+# Data Architecture
 
-### 1. Patient Linking
+Data source: BPJS Kesehatan claims database (BigQuery)
 
-Patients are linked longitudinally using anonymized participant identifiers to reconstruct individual maternal histories.
+Pipeline:
 
-### 2. Delivery Sequence Construction
+Raw → Staging → Mart → Analytic Dataset → R Modeling → Publication Output
 
-Each mother’s delivery events are ordered chronologically to create a delivery sequence:
-
-Mother → Delivery 1 → Delivery 2 → Delivery 3 → ...
-
-### 3. Inter-delivery Interval
-
-For each consecutive delivery:
-
-```
-interval = discharge_date(current_delivery) - discharge_date(previous_delivery)
-```
-
-Clinically impossible intervals are defined as:
-
-* < 150 days (biologically implausible)
-* 150–210 days (extremely improbable)
-* 210–240 days (clinically suspicious)
-
-### 4. Provider Pattern Detection
-
-Hospitals are flagged when they produce:
-
-* High proportion of short birth intervals
-* Repeated impossible deliveries from the same patients
-* Concentration of events in specific providers
+All transformation logic is version controlled.
 
 ---
 
-## Output
+# Repository Structure
 
-The system produces:
+01_sql  
+Contains all BigQuery SQL scripts used to construct staging, mart, and analytic datasets.
 
-* flagged patients
-* flagged hospitals
-* monitoring indicators for verification teams
-* downloadable audit lists for field investigators
+03_R  
+Contains data cleaning, feature engineering, modeling, and evaluation scripts.
 
----
+04_outputs  
+Stores generated figures, tables, and model objects.
 
-## Purpose
-
-This is not intended to accuse providers of fraud.
-The objective is early detection of abnormal utilization patterns requiring medical verification.
-
-The system functions as a clinical plausibility screening tool within health insurance governance.
+05_publication  
+Contains manuscript and supplementary material (RMarkdown).
 
 ---
 
-## Status
+# Reproducibility
 
-Active research prototype using SQL-based reconstruction in BigQuery.
+This project uses:
 
----
+- R
+- renv (for dependency management)
+- BigQuery SQL
 
-## Example Output
-
-Below is an example of how the system flags biologically implausible delivery sequences.
-
-Each row represents a reconstructed maternal delivery history.
-The interval between consecutive deliveries is calculated and classified into clinical plausibility categories.
-
-| Flag Category   | Interpretation                               |
-| --------------- | -------------------------------------------- |
-| IMPOSSIBLE      | Pregnancy interval biologically not possible |
-| EXTREMELY_SHORT | Highly improbable clinically                 |
-| PLAUSIBLE       | Within expected obstetric range              |
-
-The output is designed to support medical verification teams by prioritizing cases for audit, not to automatically determine fraud.
+To restore environment:

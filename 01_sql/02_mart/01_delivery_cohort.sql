@@ -1,17 +1,4 @@
--- =========================================================
--- JKN Obstetric Fraud Detection Project
--- File: 01_build_delivery_sequence.sql
--- Purpose: Construct patient-level delivery sequence
--- Author: Dody Goutama
--- Data Source: BPJS Kesehatan Claims (De-identified)
--- =========================================================
-
--- This script:
--- 1. Orders deliveries per patient
--- 2. Calculates inter-delivery interval
--- 3. Prepares anomaly detection dataset
-
-CREATE OR REPLACE TABLE `bpjs-kediri.mart.delivery_sequence` AS
+CREATE OR REPLACE TABLE `bpjs-kediri.mart_prod.persalinan_sequence` AS
 WITH seq AS (
 SELECT
   *,
@@ -26,7 +13,7 @@ SELECT
       ORDER BY tgl_pulang
   ) AS prev_delivery_date
 
-FROM `bpjs-kediri.mart.persalinan_all`
+FROM `bpjs-kediri.mart_prod.persalinan_all`
 ),
 
 interval_calc AS (

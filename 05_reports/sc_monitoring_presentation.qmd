@@ -1,0 +1,191 @@
+---
+title: "SC Monitoring & Cohort Analysis"
+author: "BPJS Kediri Analytics"
+format:
+  pptx:
+    slide-level: 1
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+# SETUP
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(bigrquery)
+library(DBI)
+library(scales)
+
+project_id <- "bpjs-kediri"
+
+con <- dbConnect(
+  bigquery(),
+  project = project_id,
+  dataset = "mart_prod",
+  billing = project_id
+)
+
+persalinan <- tbl(con, "persalinan_clean") %>% collect()
+sequence_data <- tbl(con, "persalinan_sequence") %>% collect()
+provider <- tbl(con, "provider_risk_overall") %>%
+  collect() %>%
+  filter(total_delivery >= 30)
+
+persalinan <- persalinan %>%
+  mutate(tahun = format(as.Date(tgl_pulang), "%Y"))
+```
+
+# SLIDE 1 — GAMBARAN UTILISASI PERSALINAN
+
+```{r}
+util_summary <- persalinan %>%
+  group_by(tahun) %>%
+  summarise(
+    total = n(),
+    total_sc = sum(metode_clean == "SC"),
+    sc_rate = total_sc / total
+  )
+
+ggplot(util_summary, aes(x = tahun, y = sc_rate, group = 1)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  scale_y_continuous(labels = percent_format()) +
+  theme_minimal() +
+  labs(
+    title = "Tren SC Rate Tahunan",
+    y = "SC Rate",
+    x = "Tahun"
+  )
+```
+
+```{r}
+latest <- tail(util_summary, 1)
+
+cat(paste0(
+"• Total persalinan tahun terakhir: ", latest$total, "\n",
+"• SC rate terakhir: ", round(latest$sc_rate*100,1), "%\n",
+"• Perubahan dibanding tahun awal: ",
+round((latest$sc_rate - util_summary$sc_rate[1])*100,1),
+" poin persentase."
+))
+```
+
+# SLIDE 2 — COHORT & INTERVAL KELAHIRAN
+
+```{r}
+interval_dist <- sequence_data %>%
+  count(kategori_interval) %>%
+  mutate(pct = n / sum(n))
+
+ggplot(interval_dist,
+       aes(x = reorder(kategori_interval, -pct), y = pct)) +
+  geom_col() +
+  scale_y_continuous(labels = percent_format()) +
+  theme_minimal() +
+  labs(
+    title = "Distribusi Interval Kelahiran",
+    x = "",
+    y = "Proporsi"
+  )
+```
+
+```{r}
+bi_impossible <- interval_dist %>%
+  filter(kategori_interval == "BIOLOGICALLY IMPOSSIBLE") %>%
+  pull(pct)
+
+cat(paste0(
+"• Biologically impossible: ",
+round(bi_impossible*100,2), "% dari cohort\n",
+"• Potensi: double claim / coding error / fragmentasi episode"
+))
+```
+
+# SLIDE 3 — SC RATE & OUTLIER ANALYSIS
+
+```{r}
+mean_sc <- mean(provider$sc_rate)
+sd_sc <- sd(provider$sc_rate)
+
+provider <- provider %>%
+  mutate(
+    z_score = (sc_rate - mean_sc) / sd_sc,
+    outlier = abs(z_score) > 2
+  )
+
+overall_rate <- sum(provider$total_sc) /
+                sum(provider$total_delivery)
+
+provider <- provider %>%
+  mutate(
+    se = sqrt((overall_rate * (1 - overall_rate)) / total_delivery),
+    upper_95 = overall_rate + 1.96 * se,
+    lower_95 = overall_rate - 1.96 * se
+  ) %>%
+  arrange(total_delivery)
+
+ggplot(provider,
+       aes(x = total_delivery, y = sc_rate)) +
+  geom_point(aes(color = outlier), size = 3) +
+  geom_line(aes(y = upper_95), linetype = "dashed") +
+  geom_line(aes(y = lower_95), linetype = "dashed") +
+  geom_hline(yintercept = overall_rate) +
+  scale_y_continuous(labels = percent_format()) +
+  theme_minimal() +
+  labs(
+    title = "Funnel Plot SC Rate",
+    x = "Volume Persalinan",
+    y = "SC Rate"
+  )
+```
+
+```{r}
+outlier_n <- sum(provider$outlier)
+
+cat(paste0(
+"• Jumlah RS outlier (|z| > 2): ", outlier_n, "\n",
+"• Variasi antar RS signifikan\n",
+"• Perlu clinical review pada RS di luar batas kontrol"
+))
+```
+
+# SLIDE 4 — IMPLIKASI MUTU & BIAYA
+
+```{r}
+cost_summary <- persalinan %>%
+  summarise(
+    total_cost = sum(biayaverifikasi, na.rm = TRUE),
+    sc_cost = sum(biayaverifikasi[metode_clean == "SC"], na.rm = TRUE),
+    spontan_cost = sum(biayaverifikasi[metode_clean == "SPONTAN"], na.rm = TRUE)
+  )
+
+cost_summary
+```
+
+```{r}
+cat("
+• SC berkontribusi besar terhadap total biaya
+• Variasi antar fasilitas lebar
+• Terdapat interval biologis tidak mungkin
+• Disarankan:
+   - Clinical review berbasis kasus
+   - Audit rekam medis sampling
+   - Validasi indikasi SC
+   - Evaluasi pola rujukan FKTP → RS
+")
+```
+
+
+### 1️⃣ RS Penyumbang Biologically Impossible Terbesar
+
+```{r}
+top_rs <- sequence_data %>%
+  filter(kategori_interval == "BIOLOGICALLY IMPOSSIBLE") %>%
+  count(provider_name, sort = TRUE) %>%
+  head(10)
+
+top_rs
+```
